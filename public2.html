@@ -1,34 +1,24 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>待ち人数</title>
   <style>
-    :root { color-scheme: light dark; }
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; margin: 0; padding: 24px; display: grid; place-items: center; min-height: 100vh; }
-    .card { width: min(480px, 92vw); border: 1px solid #ddd; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,.06); text-align: center; }
-    h1 { margin: 0 0 4px; font-size: 18px; font-weight: 700; letter-spacing: .03em; }
-    .count { font-size: clamp(48px, 12vw, 84px); font-weight: 800; line-height: 1; margin: 8px 0 4px; text-align: center; }
-    .sub { text-align: center; opacity: .7; font-size: 13px; }
-    .status { margin-top: 12px; font-size: 12px; text-align: center; opacity: .7; }
-    .dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; vertical-align: middle; margin-right: .4em; background: #999; }
-    .ok { background: #2ecc71; }
-    .ng { background: #e74c3c; }
-    .warning { color: #e74c3c; font-weight: bold; font-size: 16px; margin-top: 8px; display: none; }
-    .total { font-size: 16px; margin-top: 8px; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; display: grid; place-items: center; min-height: 100vh; }
+    .card { width: min(480px, 92vw); border: 1px solid #ddd; border-radius: 16px; padding: 24px; text-align:center; box-shadow: 0 2px 10px rgba(0,0,0,.06);}
+    h1 { margin:0 0 4px; font-size:18px; font-weight:700; }
+    .count { font-size: clamp(48px, 12vw, 84px); font-weight: 800; line-height:1; margin: 8px 0 4px; }
+    .sub { font-size: 13px; opacity: .7; }
+    .warning { color:red; font-weight:bold; }
   </style>
 </head>
 <body>
-  <main class="card" role="main" aria-live="polite">
+  <main class="card">
     <h1>現在の待ち人数</h1>
-    <div id="count" class="count" aria-label="現在の待ち人数">—</div>
-    <div id="sub" class="sub">接続中…</div>
-    <div id="warning" class="warning">ただいま混雑しています。緊急の場合のみ来室してください</div>
-    <div class="total" id="total">本日の累計人数: 0</div>
-    <div id="status" class="status">
-      <span class="dot" id="connDot"></span><span id="connText">接続状態を確認中</span>
-    </div>
+    <div id="count" class="count">0</div>
+    <div id="total" class="sub">累計人数: 0</div>
+    <div id="warning" class="sub"></div>
   </main>
 
   <script type="module">
@@ -42,52 +32,28 @@
       projectId: "waiting-counter",
       storageBucket: "waiting-counter.firebasestorage.app",
       messagingSenderId: "453392050902",
-      appId: "1:453392050902:web:5f786291d9ddfacf55f777"
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
     };
 
     const app = initializeApp(firebaseConfig);
-    const db  = getDatabase(app);
+    const db = getDatabase(app);
 
-    // 接続状態
-    const connDot  = document.getElementById("connDot");
-    const connText = document.getElementById("connText");
-    const connectedRef = ref(db, ".info/connected");
-    onValue(connectedRef, (snap) => {
-      const ok = snap.val() === true;
-      connDot.className = "dot " + (ok ? "ok" : "ng");
-      connText.textContent = ok ? "オンライン" : "オフライン";
-    });
-
-    // 待ち人数
-    const countEl = document.getElementById("count");
-    const subEl   = document.getElementById("sub");
-    const warningEl = document.getElementById("warning");
     const countRef = ref(db, "waitCount");
+    const totalRef = ref(db, "totalCount");
 
-    onValue(countRef, (snap) => {
-      const v = snap.val();
-      if (typeof v === "number") {
-        countEl.textContent = v;
-        subEl.textContent = "このページは自動で更新されます";
-        warningEl.style.display = v > 5 ? "block" : "none";
-      } else {
-        countEl.textContent = "0";
-        subEl.textContent = "初期化待ち（管理画面から設定してください）";
-        warningEl.style.display = "none";
-      }
+    const countEl = document.getElementById("count");
+    const totalEl = document.getElementById("total");
+    const warningEl = document.getElementById("warning");
+
+    onValue(countRef, snap => {
+      const val = snap.exists() ? snap.val() : 0;
+      countEl.textContent = val;
+      warningEl.textContent = val > 5 ? "ただいま混雑しています。緊急の場合のみ来室してください" : "";
     });
 
-    // 累計人数
-    const todayKey = new Date().toISOString().slice(0,10);
-    const totalEl = document.getElementById("total");
-    const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
-    onValue(dailyTotalRef, (snap) => {
-      const total = snap.exists() ? snap.val() : 0;
-      totalEl.textContent = "本日の累計人数: " + total;
+    onValue(totalRef, snap => {
+      totalEl.textContent = "累計人数: " + (snap.exists() ? snap.val() : 0);
     });
   </script>
 </body>
 </html>
-
-
-

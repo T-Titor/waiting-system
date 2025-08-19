@@ -18,7 +18,7 @@
     <h1>管理画面</h1>
     <button id="login">ログイン</button>
     <div>待ち人数: <span id="count">0</span></div>
-    <div>本日の累計人数: <span id="total">0</span></div>
+    <div>累計人数: <span id="total">0</span></div>
     <button id="increase">人数 +1</button>
     <button id="decrease">人数 -1</button>
     <button id="resetAll">リセット</button>
@@ -30,6 +30,7 @@
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
     import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
+    // ★ ここを自分の Firebase 設定に置き換える
     const firebaseConfig = {
       apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
       authDomain: "waiting-counter.firebaseapp.com",
@@ -39,7 +40,6 @@
       messagingSenderId: "453392050902",
       appId: "1:453392050902:web:5f786291d9ddfacf55f777",
     };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -53,12 +53,11 @@
     const statusEl = document.getElementById("status");
 
     const countRef = ref(db, "waitCount");
-    const todayKey = new Date().toISOString().slice(0,10);
-    const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
+    const totalRef = ref(db, "totalCount");
 
-    // 待ち人数・累計人数のリアルタイム表示
+    // リアルタイム表示
     onValue(countRef, snap => countEl.textContent = snap.exists() ? snap.val() : 0);
-    onValue(dailyTotalRef, snap => totalEl.textContent = snap.exists() ? snap.val() : 0);
+    onValue(totalRef, snap => totalEl.textContent = snap.exists() ? snap.val() : 0);
 
     // ログイン処理
     loginBtn.addEventListener("click", async () => {
@@ -75,7 +74,6 @@
       }
     });
 
-    // ログイン状態に応じてボタンの有効化
     onAuthStateChanged(auth, (user) => {
       const loggedIn = !!user;
       increaseBtn.disabled = !loggedIn;
@@ -83,31 +81,29 @@
       resetBtn.disabled = !loggedIn;
     });
 
-    // 人数 + 累計加算
+    // + ボタン
     increaseBtn.addEventListener("click", async () => {
-      // 待ち人数
       const snapCount = await get(countRef);
       const currentCount = snapCount.exists() ? snapCount.val() : 0;
       set(countRef, currentCount + 1);
 
-      // 累計人数
-      const snapTotal = await get(dailyTotalRef);
+      const snapTotal = await get(totalRef);
       const currentTotal = snapTotal.exists() ? snapTotal.val() : 0;
-      set(dailyTotalRef, currentTotal + 1);
+      set(totalRef, currentTotal + 1);
     });
 
-    // 人数 -
+    // - ボタン
     decreaseBtn.addEventListener("click", async () => {
       const snapCount = await get(countRef);
       const currentCount = snapCount.exists() ? snapCount.val() : 0;
       set(countRef, currentCount - 1);
     });
 
-    // リセット（待ち人数 + 累計）
+    // リセット
     resetBtn.addEventListener("click", async () => {
-      if (!confirm("待ち人数と本日の累計をリセットしますか？")) return;
+      if (!confirm("待ち人数と累計をリセットしますか？")) return;
       await set(countRef, 0);
-      await set(dailyTotalRef, 0);
+      await set(totalRef, 0);
     });
 
     // 初期状態でボタンは無効

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理画面</title>
+<style>
+body { font-family: sans-serif; padding:24px; display: grid; place-items: center; min-height: 100vh; background: #f9f9f9; }
+.card { border:1px solid #ddd; border-radius:16px; padding:24px; box-shadow:0 2px 10px rgba(0,0,0,.06); width:min(480px,90vw); text-align:center; background:#fff; }
+h1 { margin-bottom:16px; }
+button { font-size:16px; padding:8px 16px; margin:4px; border-radius:8px; cursor:pointer; }
+#count, #total { font-size:32px; font-weight:bold; margin:12px 0; }
+#status { margin-top:12px; font-size:14px; color:#555; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>管理画面</h1>
+  <div>待ち人数: <span id="count">0</span></div>
+  <div>累計人数: <span id="total">0</span></div>
+  <button id="increase">人数 +1</button>
+  <button id="decrease">人数 -1</button>
+  <button id="resetAll">リセット</button>
+  <div id="status">ログイン状態を確認中…</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+// Firebase 設定
+const firebaseConfig = {
+      apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
+      authDomain: "waiting-counter.firebaseapp.com",
+      databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "waiting-counter",
+      storageBucket: "waiting-counter.firebasestorage.app",
+      messagingSenderId: "453392050902",
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
+    };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+const increaseBtn = document.getElementById("increase");
+const decreaseBtn = document.getElementById("decrease");
+const resetBtn = document.getElementById("resetAll");
+const countEl = document.getElementById("count");
+const totalEl = document.getElementById("total");
+const statusEl = document.getElementById("status");
+
+const countRef = ref(db, "waitCount");
+const totalRef = ref(db, "totalCount");
+
+// 認証チェック
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    // 未ログインならログイン画面へ
+    window.location.href = "admin-login.html";
+  } else {
+    statusEl.textContent = "ログイン済み";
+    increaseBtn.disabled = false;
+    decreaseBtn.disabled = false;
+    resetBtn.disabled = false;
+  }
+});
+
+// 初期状態でボタン無効
+increaseBtn.disabled = true;
+decreaseBtn.disabled = true;
+resetBtn.disabled = true;
+
+// リアルタイム表示
+onValue(countRef, snap => countEl.textContent = snap.exists() ? snap.val() : 0);
+onValue(totalRef, snap => totalEl.textContent = snap.exists() ? snap.val() : 0);
+
+// + ボタン
+increaseBtn.addEventListener("click", async () => {
+  const snapCount = await get(countRef);
+  const currentCount = snapCount.exists() ? snapCount.val() : 0;
+  set(countRef, currentCount + 1);
+
+  const snapTotal = await get(totalRef);
+  const currentTotal = snapTotal.exists() ? snapTotal.val() : 0;
+  set(totalRef, currentTotal + 1);
+});
+
+// - ボタン
+decreaseBtn.addEventListener("click", async () => {
+  const snapCount = await get(countRef);
+  const currentCount = snapCount.exists() ? snapCount.val() : 0;
+  set(countRef, currentCount - 1);
+});
+
+// リセット
+resetBtn.addEventListener("click", async () => {
+  if (!confirm("待ち人数と累計をリセットしますか？")) return;
+  await set(countRef, 0);
+  await set(totalRef, 0);
+});
+</script>
+</body>
+</html>

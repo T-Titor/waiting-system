@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理者ログイン</title>
+<style>
+body { font-family: sans-serif; display: grid; place-items: center; height: 100vh; margin:0; }
+.card { padding:24px; border:1px solid #ddd; border-radius:16px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+input { display:block; margin:8px 0; padding:8px; width:200px; }
+button { padding:8px 16px; }
+#status { margin-top:8px; color:red; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>管理者ログイン</h1>
+  <input type="email" id="email" placeholder="メールアドレス">
+  <input type="password" id="password" placeholder="パスワード">
+  <button id="loginBtn">ログイン</button>
+  <div id="status"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+const firebaseConfig = {
+      apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
+      authDomain: "waiting-counter.firebaseapp.com",
+      databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "waiting-counter",
+      storageBucket: "waiting-counter.firebasestorage.app",
+      messagingSenderId: "453392050902",
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
+    };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const statusEl = document.getElementById("status");
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    statusEl.textContent = "ログイン成功！管理画面へ移動中…";
+    window.location.href = "admin.html";
+  } catch (err) {
+    statusEl.textContent = "ログイン失敗: " + err.message;
+  }
+});
+</script>
+</body>
+</html>

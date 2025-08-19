@@ -1,128 +1,98 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>待ち人数 管理</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>待ち人数管理</title>
   <style>
-    body { font-family: system-ui, sans-serif; padding: 24px; }
-    .wrap { max-width: 520px; margin: 0 auto; }
-    .card { border: 1px solid #ddd; border-radius: 16px; padding: 20px; margin-top: 16px; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input { padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
-    .count { font-size: 48px; font-weight: 700; margin: 8px 0 16px; }
-    .danger { border-color: #f33; color: #f33; }
-    .hidden { display: none; }
+    body { font-family: sans-serif; padding: 24px; display: grid; place-items: center; min-height: 100vh; }
+    .card { border: 1px solid #ddd; border-radius: 16px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,.06); width: min(480px, 90vw); text-align: center; }
+    button { font-size: 16px; padding: 8px 16px; margin: 4px; border-radius: 8px; cursor: pointer; }
+    #count { font-size: 48px; font-weight: bold; margin: 16px 0; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>待ち人数 管理</h1>
-
-    <!-- ログインフォーム -->
-    <div id="loginCard" class="card">
-      <h2>ログイン</h2>
-      <div class="row">
-        <input id="email" type="email" placeholder="メールアドレス" />
-        <input id="password" type="password" placeholder="パスワード" />
-        <button id="loginBtn">ログイン</button>
-      </div>
-      <p id="loginMsg"></p>
-    </div>
-
-    <!-- 操作UI -->
-    <div id="adminCard" class="card hidden">
-      <div class="row" style="justify-content: space-between;">
-        <h2 style="margin:0;">コントロール</h2>
-        <button id="logoutBtn">ログアウト</button>
-      </div>
-
-      <div class="count" id="count">0</div>
-
-      <div class="row">
-        <button id="minusBtn">− 1</button>
-        <button id="plusBtn">＋ 1</button>
-        <button id="resetBtn" class="danger">リセット（0）</button>
-      </div>
-    </div>
+  <div class="card">
+    <h1>管理画面</h1>
+    <button id="login">ログイン</button>
+    <div id="count">—</div>
+    <button id="increase">人数 +1</button>
+    <button id="decrease">人数 -1</button>
+    <p id="status">ログインして操作してください</p>
   </div>
 
   <script type="module">
+    // 🔹 Firebase SDK 読み込み
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, onValue, runTransaction, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-    // ★ここを自分の設定に置き換え
- const firebaseConfig = {
-  apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
-  authDomain: "waiting-counter.firebaseapp.com",
-  databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "waiting-counter",
-  storageBucket: "waiting-counter.firebasestorage.app",
-  messagingSenderId: "453392050902",
-  appId: "1:453392050902:web:5f786291d9ddfacf55f777",
-  measurementId: "G-TLR6T30XBZ"
-};
-
+    // 🔹 Firebase 設定（自分のプロジェクト情報に置き換える）
+    const firebaseConfig = {
+      apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
+      authDomain: "waiting-counter.firebaseapp.com",
+      databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "waiting-counter",
+      storageBucket: "waiting-counter.firebasestorage.app",
+      messagingSenderId: "453392050902",
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
+    };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
     const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const loginBtn = document.getElementById("login");
+    const increaseBtn = document.getElementById("increase");
+    const decreaseBtn = document.getElementById("decrease");
+    const countEl = document.getElementById("count");
+    const statusEl = document.getElementById("status");
 
     const countRef = ref(db, "waitCount");
 
-    // 表示の自動更新
-    onValue(countRef, (snap) => {
-      const v = snap.val();
-      document.getElementById("count").textContent = (typeof v === "number") ? v : 0;
+    // 🔹 現在の待ち人数をリアルタイムで表示
+    onValue(countRef, (snapshot) => {
+      const v = snapshot.exists() ? snapshot.val() : 0;
+      countEl.textContent = v;
     });
 
-    // UI 切り替え
-    const loginCard = document.getElementById("loginCard");
-    const adminCard = document.getElementById("adminCard");
+    // 🔹 ログイン処理（匿名）
+    loginBtn.addEventListener("click", () => {
+      signInAnonymously(auth)
+        .then(() => {
+          statusEl.textContent = "ログイン成功！人数を操作できます";
+        })
+        .catch(err => {
+          console.error(err);
+          statusEl.textContent = "ログイン失敗：" + err.message;
+        });
+    });
+
+    // 🔹 認証状態が変化したらボタンの活性化を切り替え
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginCard.classList.add("hidden");
-        adminCard.classList.remove("hidden");
-      } else {
-        adminCard.classList.add("hidden");
-        loginCard.classList.remove("hidden");
-      }
+      const loggedIn = !!user;
+      increaseBtn.disabled = !loggedIn;
+      decreaseBtn.disabled = !loggedIn;
     });
 
-    // ログイン
-    document.getElementById("loginBtn").onclick = async () => {
-      const email = (document.getElementById("email") as HTMLInputElement).value;
-      const password = (document.getElementById("password") as HTMLInputElement).value;
-      const msg = document.getElementById("loginMsg");
-      msg.textContent = "";
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (e) {
-        msg.textContent = "ログインに失敗しました：" + (e.message || e);
-      }
-    };
+    // 🔹 人数増加
+    increaseBtn.addEventListener("click", async () => {
+      const snapshot = await get(countRef);
+      let current = snapshot.exists() ? snapshot.val() : 0;
+      set(countRef, current + 1);
+    });
 
-    // ログアウト
-    document.getElementById("logoutBtn").onclick = () => signOut(auth);
+    // 🔹 人数減少
+    decreaseBtn.addEventListener("click", async () => {
+      const snapshot = await get(countRef);
+      let current = snapshot.exists() ? snapshot.val() : 0;
+      set(countRef, current - 1);
+    });
 
-    // 増減（トランザクションで安全に更新）
-    function change(delta) {
-      runTransaction(countRef, (current) => {
-        const cur = (typeof current === "number") ? current : 0;
-        const next = cur + delta;
-        return next < 0 ? 0 : next; // マイナスにならないようクリップ
-      });
-    }
+    // 初期状態ではボタン無効
+    increaseBtn.disabled = true;
+    decreaseBtn.disabled = true;
 
-    document.getElementById("plusBtn").onclick = () => change(+1);
-    document.getElementById("minusBtn").onclick = () => change(-1);
-
-    // リセット
-    document.getElementById("resetBtn").onclick = async () => {
-      await set(countRef, 0);
-    };
   </script>
 </body>
 </html>

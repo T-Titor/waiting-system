@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>待ち人数表示</title>
+  <style>
+    body { font-family: sans-serif; padding: 24px; text-align: center; }
+    #count { font-size: 48px; font-weight: bold; margin: 16px 0; }
+    #warning { color: red; font-weight: bold; font-size: 20px; display: none; }
+    #total { font-size: 20px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>待ち人数</h1>
+  <div id="count">—</div>
+  <div id="warning">ただいま混雑しています。緊急の場合のみ来室してください</div>
+  <div id="total">本日の累計人数: 0</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+    // 🔹 Firebase 設定（admin.html と同じプロジェクト）
+    const firebaseConfig = {
+      apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
+      authDomain: "waiting-counter.firebaseapp.com",
+      databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "waiting-counter",
+      storageBucket: "waiting-counter.firebasestorage.app",
+      messagingSenderId: "453392050902",
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const countEl = document.getElementById("count");
+    const warningEl = document.getElementById("warning");
+    const totalEl = document.getElementById("total");
+
+    // 当日の累計用に日付キーを作る
+    const todayKey = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
+    const waitCountRef = ref(db, "waitCount");
+
+    // 🔹 待ち人数のリアルタイム表示
+    onValue(waitCountRef, (snapshot) => {
+      const count = snapshot.exists() ? snapshot.val() : 0;
+      countEl.textContent = count;
+
+      // 5人以上なら警告表示
+      warningEl.style.display = count > 5 ? "block" : "none";
+
+      // 累計人数を更新
+      if(count > 0) {
+        get(dailyTotalRef).then(snap => {
+          const currentTotal = snap.exists() ? snap.val() : 0;
+          set(dailyTotalRef, currentTotal + 1);
+        });
+      }
+    });
+
+    // 🔹 初回に累計人数を表示
+    get(dailyTotalRef).then(snap => {
+      const total = snap.exists() ? snap.val() : 0;
+      totalEl.textContent = "本日の累計人数: " + total;
+    });
+  </script>
+</body>
+</html>
+

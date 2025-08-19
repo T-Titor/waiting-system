@@ -42,7 +42,7 @@
       projectId: "waiting-counter",
       storageBucket: "waiting-counter.firebasestorage.app",
       messagingSenderId: "453392050902",
-      appId: "1:453392050902:web:5f786291d9ddfacf55f777"
+      appId: "1:453392050902:web:5f786291d9ddfacf55f777",
     };
 
     const app = initializeApp(firebaseConfig);
@@ -78,13 +78,13 @@
     });
 
     // 累計人数
-    const todayKey = new Date().toISOString().slice(0,10);
     const totalEl = document.getElementById("total");
-    const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
-    onValue(dailyTotalRef, (snap) => {
+    const totalRef = ref(db, "totalCount");  // 管理画面の totalCount と同じパス
+    onValue(totalRef, (snap) => {
       const total = snap.exists() ? snap.val() : 0;
       totalEl.textContent = "本日の累計人数: " + total;
     });
   </script>
 </body>
 </html>
+

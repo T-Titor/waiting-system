@@ -19,9 +19,8 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-    // 🔹 Firebase 設定（admin.html と同じプロジェクト）
     const firebaseConfig = {
       apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
       authDomain: "waiting-counter.firebaseapp.com",
@@ -39,34 +38,24 @@
     const warningEl = document.getElementById("warning");
     const totalEl = document.getElementById("total");
 
-    // 当日の累計用に日付キーを作る
-    const todayKey = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    const todayKey = new Date().toISOString().slice(0,10); 
+    const countRef = ref(db, "waitCount");
     const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
-    const waitCountRef = ref(db, "waitCount");
 
-    // 🔹 待ち人数のリアルタイム表示
-    onValue(waitCountRef, (snapshot) => {
+    // 待ち人数表示
+    onValue(countRef, (snapshot) => {
       const count = snapshot.exists() ? snapshot.val() : 0;
       countEl.textContent = count;
-
-      // 5人以上なら警告表示
       warningEl.style.display = count > 5 ? "block" : "none";
-
-      // 累計人数を更新
-      if(count > 0) {
-        get(dailyTotalRef).then(snap => {
-          const currentTotal = snap.exists() ? snap.val() : 0;
-          set(dailyTotalRef, currentTotal + 1);
-        });
-      }
     });
 
-    // 🔹 初回に累計人数を表示
-    get(dailyTotalRef).then(snap => {
-      const total = snap.exists() ? snap.val() : 0;
+    // 累計人数表示
+    onValue(dailyTotalRef, (snapshot) => {
+      const total = snapshot.exists() ? snapshot.val() : 0;
       totalEl.textContent = "本日の累計人数: " + total;
     });
   </script>
 </body>
 </html>
+
 

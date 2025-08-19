@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -22,9 +23,9 @@
   </div>
 
   <script type="module">
-    // 🔹 Firebase SDK 読み込み
+    // 🔹 Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
     import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
     // 🔹 Firebase 設定（自分のプロジェクト情報に置き換える）
@@ -38,6 +39,8 @@
       appId: "1:453392050902:web:5f786291d9ddfacf55f777",
     };
 
+ 
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -50,25 +53,33 @@
 
     const countRef = ref(db, "waitCount");
 
-    // 🔹 現在の待ち人数をリアルタイムで表示
+    // 🔹 リアルタイムで人数表示
     onValue(countRef, (snapshot) => {
       const v = snapshot.exists() ? snapshot.val() : 0;
       countEl.textContent = v;
     });
 
-    // 🔹 ログイン処理（匿名）
-    loginBtn.addEventListener("click", () => {
-      signInAnonymously(auth)
-        .then(() => {
-          statusEl.textContent = "ログイン成功！人数を操作できます";
-        })
-        .catch(err => {
-          console.error(err);
-          statusEl.textContent = "ログイン失敗：" + err.message;
-        });
+    // 🔹 ログイン処理（メール/パスワード）
+    loginBtn.addEventListener("click", async () => {
+      const email = prompt("メールアドレスを入力");
+      const password = prompt("パスワードを入力");
+
+      if (!email || !password) {
+        alert("メールとパスワードを入力してください");
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        statusEl.textContent = "ログイン成功！人数を操作できます";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "ログイン失敗：" + err.message;
+        alert("ログイン失敗：" + err.message);
+      }
     });
 
-    // 🔹 認証状態が変化したらボタンの活性化を切り替え
+    // 🔹 認証状態によるボタン制御
     onAuthStateChanged(auth, (user) => {
       const loggedIn = !!user;
       increaseBtn.disabled = !loggedIn;
@@ -89,10 +100,9 @@
       set(countRef, current - 1);
     });
 
-    // 初期状態ではボタン無効
+    // 初期状態で操作ボタンは無効
     increaseBtn.disabled = true;
     decreaseBtn.disabled = true;
-
   </script>
 </body>
 </html>

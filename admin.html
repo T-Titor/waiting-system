@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>待ち人数 管理</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; }
+    .wrap { max-width: 520px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; border-radius: 16px; padding: 20px; margin-top: 16px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input { padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+    .count { font-size: 48px; font-weight: 700; margin: 8px 0 16px; }
+    .danger { border-color: #f33; color: #f33; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>待ち人数 管理</h1>
+
+    <!-- ログインフォーム -->
+    <div id="loginCard" class="card">
+      <h2>ログイン</h2>
+      <div class="row">
+        <input id="email" type="email" placeholder="メールアドレス" />
+        <input id="password" type="password" placeholder="パスワード" />
+        <button id="loginBtn">ログイン</button>
+      </div>
+      <p id="loginMsg"></p>
+    </div>
+
+    <!-- 操作UI -->
+    <div id="adminCard" class="card hidden">
+      <div class="row" style="justify-content: space-between;">
+        <h2 style="margin:0;">コントロール</h2>
+        <button id="logoutBtn">ログアウト</button>
+      </div>
+
+      <div class="count" id="count">0</div>
+
+      <div class="row">
+        <button id="minusBtn">− 1</button>
+        <button id="plusBtn">＋ 1</button>
+        <button id="resetBtn" class="danger">リセット（0）</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getDatabase, ref, onValue, runTransaction, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+    // ★ここを自分の設定に置き換え
+ const firebaseConfig = {
+  apiKey: "AIzaSyAeW2HjzWXMoOoQecXlwC0_f0hu9eNB-m0",
+  authDomain: "waiting-counter.firebaseapp.com",
+  databaseURL: "https://waiting-counter-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "waiting-counter",
+  storageBucket: "waiting-counter.firebasestorage.app",
+  messagingSenderId: "453392050902",
+  appId: "1:453392050902:web:5f786291d9ddfacf55f777",
+  measurementId: "G-TLR6T30XBZ"
+};
+
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    const countRef = ref(db, "waitCount");
+
+    // 表示の自動更新
+    onValue(countRef, (snap) => {
+      const v = snap.val();
+      document.getElementById("count").textContent = (typeof v === "number") ? v : 0;
+    });
+
+    // UI 切り替え
+    const loginCard = document.getElementById("loginCard");
+    const adminCard = document.getElementById("adminCard");
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginCard.classList.add("hidden");
+        adminCard.classList.remove("hidden");
+      } else {
+        adminCard.classList.add("hidden");
+        loginCard.classList.remove("hidden");
+      }
+    });
+
+    // ログイン
+    document.getElementById("loginBtn").onclick = async () => {
+      const email = (document.getElementById("email") as HTMLInputElement).value;
+      const password = (document.getElementById("password") as HTMLInputElement).value;
+      const msg = document.getElementById("loginMsg");
+      msg.textContent = "";
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (e) {
+        msg.textContent = "ログインに失敗しました：" + (e.message || e);
+      }
+    };
+
+    // ログアウト
+    document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+    // 増減（トランザクションで安全に更新）
+    function change(delta) {
+      runTransaction(countRef, (current) => {
+        const cur = (typeof current === "number") ? current : 0;
+        const next = cur + delta;
+        return next < 0 ? 0 : next; // マイナスにならないようクリップ
+      });
+    }
+
+    document.getElementById("plusBtn").onclick = () => change(+1);
+    document.getElementById("minusBtn").onclick = () => change(-1);
+
+    // リセット
+    document.getElementById("resetBtn").onclick = async () => {
+      await set(countRef, 0);
+    };
+  </script>
+</body>
+</html>

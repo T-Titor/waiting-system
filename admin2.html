@@ -17,7 +17,7 @@
   <div class="card">
     <h1>管理画面</h1>
     <button id="login">ログイン</button>
-    <div>待ち人数: <span id="count">—</span></div>
+    <div>待ち人数: <span id="count">0</span></div>
     <div>本日の累計人数: <span id="total">0</span></div>
     <button id="increase">人数 +1</button>
     <button id="decrease">人数 -1</button>
@@ -85,25 +85,29 @@
 
     // 人数 + 累計加算
     increaseBtn.addEventListener("click", async () => {
+      // 待ち人数
       const snapCount = await get(countRef);
-      set(countRef, (snapCount.exists() ? snapCount.val() : 0) + 1);
+      const currentCount = snapCount.exists() ? snapCount.val() : 0;
+      set(countRef, currentCount + 1);
 
+      // 累計人数
       const snapTotal = await get(dailyTotalRef);
-      set(dailyTotalRef, (snapTotal.exists() ? snapTotal.val() : 0) + 1);
+      const currentTotal = snapTotal.exists() ? snapTotal.val() : 0;
+      set(dailyTotalRef, currentTotal + 1);
     });
 
-    // 人数 - 
+    // 人数 -
     decreaseBtn.addEventListener("click", async () => {
       const snapCount = await get(countRef);
-      set(countRef, (snapCount.exists() ? snapCount.val() : 0) - 1);
+      const currentCount = snapCount.exists() ? snapCount.val() : 0;
+      set(countRef, currentCount - 1);
     });
 
     // リセット（待ち人数 + 累計）
-    resetBtn.addEventListener("click", () => {
-      if (confirm("待ち人数と本日の累計をリセットしますか？")) {
-        set(countRef, 0);
-        set(dailyTotalRef, 0);
-      }
+    resetBtn.addEventListener("click", async () => {
+      if (!confirm("待ち人数と本日の累計をリセットしますか？")) return;
+      await set(countRef, 0);
+      await set(dailyTotalRef, 0);
     });
 
     // 初期状態でボタンは無効
@@ -113,4 +117,3 @@
   </script>
 </body>
 </html>
-

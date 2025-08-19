@@ -9,6 +9,7 @@
     #count { font-size: 48px; font-weight: bold; margin: 16px 0; }
     #warning { color: red; font-weight: bold; font-size: 20px; display: none; }
     #total { font-size: 20px; margin-top: 16px; }
+    #status { margin-top: 12px; font-weight: bold; color: green; }
   </style>
 </head>
 <body>
@@ -16,6 +17,7 @@
   <div id="count">—</div>
   <div id="warning">ただいま混雑しています。緊急の場合のみ来室してください</div>
   <div id="total">本日の累計人数: 0</div>
+  <div id="status">管理者オンライン状況: —</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
@@ -30,32 +32,39 @@
       messagingSenderId: "453392050902",
       appId: "1:453392050902:web:5f786291d9ddfacf55f777",
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     const countEl = document.getElementById("count");
     const warningEl = document.getElementById("warning");
     const totalEl = document.getElementById("total");
+    const statusEl = document.getElementById("status");
 
-    const todayKey = new Date().toISOString().slice(0,10); 
+    const todayKey = new Date().toISOString().slice(0,10);
     const countRef = ref(db, "waitCount");
     const dailyTotalRef = ref(db, "dailyTotal/" + todayKey);
 
-    // 待ち人数表示
-    onValue(countRef, (snapshot) => {
-      const count = snapshot.exists() ? snapshot.val() : 0;
+    // 待ち人数
+    onValue(countRef, (snap) => {
+      const count = snap.exists() ? snap.val() : 0;
       countEl.textContent = count;
       warningEl.style.display = count > 5 ? "block" : "none";
     });
 
-    // 累計人数表示
-    onValue(dailyTotalRef, (snapshot) => {
-      const total = snapshot.exists() ? snapshot.val() : 0;
-      totalEl.textContent = "本日の累計人数: " + total;
+    // 累計人数
+    onValue(dailyTotalRef, (snap) => {
+      totalEl.textContent = "本日の累計人数: " + (snap.exists() ? snap.val() : 0);
+    });
+
+    // 管理者オンライン状況（簡易版：waitCount への書き込みでオンライン判定）
+    const adminStatusRef = ref(db, "adminOnline");
+    onValue(adminStatusRef, (snap) => {
+      const online = snap.exists() && snap.val() ? "オンライン" : "オフライン";
+      statusEl.textContent = "管理者オンライン状況: " + online;
     });
   </script>
 </body>
 </html>
+
 
 
